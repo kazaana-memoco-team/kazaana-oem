@@ -11,6 +11,8 @@ export type MessageSenderContext = "customer" | "admin";
 
 export type OrderType = "product_customize" | "full_custom";
 
+export type DocumentType = "quote" | "invoice" | "delivery" | "receipt";
+
 export type OrderStatus =
   | "draft"
   | "awaiting_quote"
@@ -75,6 +77,7 @@ export interface Database {
       orders: {
         Row: {
           id: string;
+          order_number: string;
           customer_id: string;
           assigned_craftsman_id: string | null;
           type: OrderType;
@@ -95,6 +98,7 @@ export interface Database {
         };
         Insert: {
           id?: string;
+          order_number?: string;
           customer_id: string;
           assigned_craftsman_id?: string | null;
           type: OrderType;
@@ -112,6 +116,48 @@ export interface Database {
           internal_notes?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["orders"]["Insert"]>;
+        Relationships: [];
+      };
+      documents: {
+        Row: {
+          id: string;
+          order_id: string;
+          type: DocumentType;
+          document_number: string;
+          amount: number | null;
+          notes: string | null;
+          issued_by: string | null;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          type: DocumentType;
+          document_number: string;
+          amount?: number | null;
+          notes?: string | null;
+          issued_by?: string | null;
+          metadata?: Json;
+        };
+        Update: Partial<Database["public"]["Tables"]["documents"]["Insert"]>;
+        Relationships: [];
+      };
+      system_settings: {
+        Row: {
+          key: string;
+          value: Json;
+          description: string | null;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          key: string;
+          value: Json;
+          description?: string | null;
+          updated_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["system_settings"]["Insert"]>;
         Relationships: [];
       };
       messages: {
@@ -162,6 +208,7 @@ export interface Database {
       order_type: OrderType;
       order_status: OrderStatus;
       message_sender_context: MessageSenderContext;
+      document_type: DocumentType;
     };
     CompositeTypes: Record<string, never>;
   };

@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { verifyShopifyWebhook } from "@/lib/shopify/webhooks";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { OEM_ORDER_ID_ATTR_KEY } from "@/lib/shopify/draft-orders";
+import { issueDocumentWithNotifications } from "@/lib/documents/issue";
+import type { DocumentType } from "@/lib/documents/types";
 
 export const dynamic = "force-dynamic";
 
@@ -63,9 +65,30 @@ export async function POST(request: NextRequest) {
       event_type: "shopify_paid",
       payload: { shopify_order_id: payload.id, name: payload.name },
     });
+
+    // Auto-issue 請求書 / 納品書 / 領収書 once payment is confirmed.
+    // 見積書 stays manual (admin sends it before checkout).
+    await autoIssueOnPaid(supabase, oemOrderId);
   }
 
   return NextResponse.json({ ok: true });
+}
+
+async function autoIssueOnPaid(
+  supabase: Awaited<ReturnType<typeof createServiceRoleClient>>,
+  oemOrderId: string,
+) {
+  const types: DocumentType[] = ["invoice", "delivery", "receipt"];
+  for (const type of types) {
+    const result = await issueDocumentWithNotifications({
+      supabase,
+      orderId: oemOrderId,
+      type,
+    });
+    if (result.error && result.error !== "already issued") {
+      console.error(`[webhook] auto-issue ${type} failed`, result.error);
+    }
+  }
 }
 
 function extractOemOrderIdFromAttributes(

@@ -9,6 +9,8 @@ import {
 } from "@/components/chat/order-chat";
 import { CheckoutButton } from "./checkout-button";
 import { getProductByHandle } from "@/lib/shopify/products";
+import { DocumentsList } from "@/components/documents/documents-list";
+import type { IssuedDocument } from "@/lib/documents/types";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +44,15 @@ export default async function OrderDetailPage({
     .maybeSingle();
 
   if (error || !order) notFound();
+
+  const { data: documentsRaw } = await supabase
+    .from("documents")
+    .select(
+      "id, order_id, type, document_number, amount, notes, issued_by, metadata, created_at",
+    )
+    .eq("order_id", id)
+    .order("created_at", { ascending: false });
+  const documents: IssuedDocument[] = (documentsRaw ?? []) as IssuedDocument[];
 
   const { data: messagesRaw } = await supabase
     .from("messages")
@@ -168,6 +179,10 @@ export default async function OrderDetailPage({
                 {notes || <Muted>なし</Muted>}
               </span>
             </Row>
+          </BentoSection>
+
+          <BentoSection title="書類">
+            <DocumentsList documents={documents} />
           </BentoSection>
 
           <BentoSection title="金額">

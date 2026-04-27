@@ -128,3 +128,38 @@
     @apply font-sans;
   }
 }
+
+/* ─── Document print styles ────────────────────────────────
+   The /documents/[id] page renders an A4 portrait sheet that
+   should print one-to-one without the surrounding chrome. */
+.document-page {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 16mm 16mm 18mm;
+  font-family:
+    "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Yu Gothic UI",
+    "Noto Sans JP", "Meiryo", system-ui, -apple-system, sans-serif;
+  font-feature-settings: "palt";
+}
+
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
+@media print {
+  html,
+  body {
+    background: white !important;
+  }
+  .document-host {
+    background: white !important;
+  }
+  .document-toolbar {
+    display: none !important;
+  }
+  .document-page {
+    box-shadow: none !important;
+    margin: 0 !important;
+  }
+}

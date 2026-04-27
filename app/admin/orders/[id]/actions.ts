@@ -2,8 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import {
+  createClient,
+  createServiceRoleClient,
+} from "@/lib/supabase/server";
 import type { Database, Json } from "@/lib/types/database";
+import { issueDocumentWithNotifications } from "@/lib/documents/issue";
 
 type OrderUpdate = Database["public"]["Tables"]["orders"]["Update"];
 
@@ -96,6 +100,24 @@ export async function updateOrder(
     event_type: "admin_update",
     payload: updates as Json,
   });
+
+  // Auto-issue 見積書 once admin sets a final_price for the first time.
+  if (
+    parsed.data.final_price !== undefined &&
+    parsed.data.final_price !== null
+  ) {
+    const svc = await createServiceRoleClient();
+    const result = await issueDocumentWithNotifications({
+      supabase: svc,
+      orderId,
+      type: "quote",
+      issuedBy: auth.userId,
+    });
+    if (result.error && result.error !== "already issued") {
+      // Don't fail the update — just log.
+      console.error("[admin] quote auto-issue failed", result.error);
+    }
+  }
 
   revalidatePath(`/admin/orders/${orderId}`);
   revalidatePath(`/account/orders/${orderId}`);

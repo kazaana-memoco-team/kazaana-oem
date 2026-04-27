@@ -9,6 +9,12 @@ import {
 } from "@/components/chat/order-chat";
 import { AdminControls } from "./admin-controls";
 import { getProductByHandle } from "@/lib/shopify/products";
+import { IssueDocumentButtons } from "./issue-document-buttons";
+import { DocumentsList } from "@/components/documents/documents-list";
+import type {
+  DocumentType,
+  IssuedDocument,
+} from "@/lib/documents/types";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +55,18 @@ export default async function AdminOrderDetailPage({
     .select("id, display_name, role")
     .eq("id", order.customer_id)
     .maybeSingle();
+
+  const { data: documentsRaw } = await supabase
+    .from("documents")
+    .select(
+      "id, order_id, type, document_number, amount, notes, issued_by, metadata, created_at",
+    )
+    .eq("order_id", id)
+    .order("created_at", { ascending: false });
+  const documents: IssuedDocument[] = (documentsRaw ?? []) as IssuedDocument[];
+  const alreadyIssued: DocumentType[] = documents.map(
+    (d) => d.type as DocumentType,
+  );
 
   const { data: messagesRaw } = await supabase
     .from("messages")
@@ -200,6 +218,16 @@ export default async function AdminOrderDetailPage({
               </Row>
             ) : null}
           </BentoSection>
+
+            <BentoSection title="書類">
+              <IssueDocumentButtons
+                orderId={order.id}
+                alreadyIssued={alreadyIssued}
+              />
+              <div className="mt-4">
+                <DocumentsList documents={documents} />
+              </div>
+            </BentoSection>
 
             <BentoSection title="管理操作">
               <AdminControls
