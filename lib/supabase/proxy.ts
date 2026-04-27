@@ -13,7 +13,36 @@ const ROLE_PROTECTED_PATHS: Array<{
   { prefix: "/admin", allowedRoles: ["admin"] },
 ];
 
+/**
+ * Optional Basic Auth gate. Active only when BASIC_AUTH_USER/PASS are set.
+ * Bypassed for Shopify webhooks (HMAC-authenticated) and Next.js internals.
+ */
+function checkBasicAuth(request: NextRequest): NextResponse | null {
+  const user = process.env.BASIC_AUTH_USER;
+  const pass = process.env.BASIC_AUTH_PASS;
+  if (!user || !pass) return null;
+
+  const path = request.nextUrl.pathname;
+  // Skip for endpoints that get authenticated by other means
+  if (path.startsWith("/api/shopify/webhook")) return null;
+  if (path.startsWith("/_next") || path === "/favicon.ico") return null;
+
+  const auth = request.headers.get("authorization");
+  const expected = `Basic ${btoa(`${user}:${pass}`)}`;
+  if (auth === expected) return null;
+
+  return new NextResponse("Authentication required", {
+    status: 401,
+    headers: {
+      "WWW-Authenticate": 'Basic realm="BECOS OEM"',
+    },
+  });
+}
+
 export async function updateSession(request: NextRequest) {
+  const basicAuthResponse = checkBasicAuth(request);
+  if (basicAuthResponse) return basicAuthResponse;
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient<Database>(
