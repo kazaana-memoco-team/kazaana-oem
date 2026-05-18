@@ -90,14 +90,12 @@ export default async function Home() {
           >
             カスタマイズ商品を見る
           </Link>
-          {!user ? (
-            <Link
-              href="/signup"
-              className={buttonVariants({ variant: "outline", size: "lg" })}
-            >
-              はじめる（無料登録）
-            </Link>
-          ) : null}
+          <Link
+            href="/custom-order"
+            className={buttonVariants({ variant: "outline", size: "lg" })}
+          >
+            ゼロから職人に相談する
+          </Link>
         </div>
       </section>
 

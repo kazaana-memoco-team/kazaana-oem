@@ -11,6 +11,7 @@ import { CheckoutButton } from "./checkout-button";
 import { getProductByHandle } from "@/lib/shopify/products";
 import { DocumentsList } from "@/components/documents/documents-list";
 import type { IssuedDocument } from "@/lib/documents/types";
+import { budgetLabel } from "@/lib/custom-order";
 
 export const dynamic = "force-dynamic";
 
@@ -86,6 +87,7 @@ export default async function OrderDetailPage({
   }));
 
   const customization = order.customization as Record<string, unknown> | null;
+  const isFullCustom = order.type === "full_custom";
   const variantTitle = (customization?.variant_title as string) ?? "-";
   const productTitle = (customization?.product_title as string) ?? "-";
   const quantity = (customization?.quantity as number) ?? 1;
@@ -141,45 +143,54 @@ export default async function OrderDetailPage({
 
         <div className="border bg-background">
           <div className="divide-y">
-            {productImageUrl ? (
-              <section className="relative aspect-[16/10] w-full overflow-hidden bg-muted">
-                <Image
-                  src={productImageUrl}
-                  alt={productImageAlt}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 60vw"
-                  className="object-cover"
-                  priority
-                />
-              </section>
-            ) : null}
+            {isFullCustom ? (
+              <FullCustomSections
+                customization={customization}
+                referenceImages={order.reference_images ?? []}
+              />
+            ) : (
+              <>
+                {productImageUrl ? (
+                  <section className="relative aspect-[16/10] w-full overflow-hidden bg-muted">
+                    <Image
+                      src={productImageUrl}
+                      alt={productImageAlt}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 60vw"
+                      className="object-cover"
+                      priority
+                    />
+                  </section>
+                ) : null}
 
-            <BentoSection title="商品">
-            <Row label="商品名">{productTitle}</Row>
-            <Row label="バリアント">{variantTitle}</Row>
-            <Row label="数量">{quantity}</Row>
-            <Row label="単価">{formatYen(unitPrice)}</Row>
-            {craftsmanDisplayName ? (
-              <Row label="作り手">{craftsmanDisplayName}</Row>
-            ) : null}
-          </BentoSection>
+                <BentoSection title="商品">
+                  <Row label="商品名">{productTitle}</Row>
+                  <Row label="バリアント">{variantTitle}</Row>
+                  <Row label="数量">{quantity}</Row>
+                  <Row label="単価">{formatYen(unitPrice)}</Row>
+                  {craftsmanDisplayName ? (
+                    <Row label="作り手">{craftsmanDisplayName}</Row>
+                  ) : null}
+                </BentoSection>
 
-          <BentoSection title="カスタマイズ内容">
-            <Row label="名入れ">
-              {textEngraving || <Muted>なし</Muted>}
-            </Row>
-            <Row label="ギフトラッピング">
-              {giftWrap ? "あり" : <Muted>なし</Muted>}
-            </Row>
-            <Row label="ギフトメッセージ">
-              {giftMessage || <Muted>なし</Muted>}
-            </Row>
-            <Row label="備考">
-              <span className="whitespace-pre-wrap">
-                {notes || <Muted>なし</Muted>}
-              </span>
-            </Row>
-          </BentoSection>
+                <BentoSection title="カスタマイズ内容">
+                  <Row label="名入れ">
+                    {textEngraving || <Muted>なし</Muted>}
+                  </Row>
+                  <Row label="ギフトラッピング">
+                    {giftWrap ? "あり" : <Muted>なし</Muted>}
+                  </Row>
+                  <Row label="ギフトメッセージ">
+                    {giftMessage || <Muted>なし</Muted>}
+                  </Row>
+                  <Row label="備考">
+                    <span className="whitespace-pre-wrap">
+                      {notes || <Muted>なし</Muted>}
+                    </span>
+                  </Row>
+                </BentoSection>
+              </>
+            )}
 
           <BentoSection title="書類">
             <DocumentsList documents={documents} />
@@ -270,6 +281,59 @@ function Row({
 
 function Muted({ children }: { children: React.ReactNode }) {
   return <span className="text-muted-foreground">{children}</span>;
+}
+
+function FullCustomSections({
+  customization,
+  referenceImages,
+}: {
+  customization: Record<string, unknown> | null;
+  referenceImages: string[];
+}) {
+  const title = (customization?.title as string) ?? "（無題）";
+  const genre = (customization?.genre as string) ?? "-";
+  const description = (customization?.description as string) ?? "";
+  const budget = (customization?.budget as string) ?? "";
+  const deadline = (customization?.desired_deadline as string | null) ?? null;
+  const quantity = (customization?.quantity as number) ?? 1;
+
+  return (
+    <>
+      <BentoSection title="カスタムオーダー内容">
+        <Row label="件名">{title}</Row>
+        <Row label="ジャンル">{genre}</Row>
+        <Row label="ご予算">{budgetLabel(budget)}</Row>
+        <Row label="数量">{quantity}</Row>
+        <Row label="希望納期">{deadline || <Muted>指定なし</Muted>}</Row>
+        <Row label="ご要望">
+          <span className="whitespace-pre-wrap">
+            {description || <Muted>なし</Muted>}
+          </span>
+        </Row>
+      </BentoSection>
+
+      {referenceImages.length > 0 ? (
+        <BentoSection title="参考画像">
+          <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+            {referenceImages.map((url, i) => (
+              <li
+                key={url}
+                className="relative aspect-square overflow-hidden rounded-md border bg-muted"
+              >
+                <Image
+                  src={url}
+                  alt={`参考画像 ${i + 1}`}
+                  fill
+                  sizes="120px"
+                  className="object-cover"
+                />
+              </li>
+            ))}
+          </ul>
+        </BentoSection>
+      ) : null}
+    </>
+  );
 }
 
 function formatYen(amount: number): string {

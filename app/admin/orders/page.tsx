@@ -109,6 +109,7 @@ export default async function AdminOrdersPage({
             const cust = o.customization as Record<string, unknown> | null;
             const productTitle =
               (cust?.product_title as string) ??
+              (cust?.title as string) ??
               (cust?.handle as string) ??
               "（不明な商品）";
             const variantTitle = cust?.variant_title as string | undefined;

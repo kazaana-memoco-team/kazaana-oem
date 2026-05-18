@@ -15,6 +15,7 @@ import type {
   DocumentType,
   IssuedDocument,
 } from "@/lib/documents/types";
+import { budgetLabel } from "@/lib/custom-order";
 
 export const dynamic = "force-dynamic";
 
@@ -92,8 +93,10 @@ export default async function AdminOrderDetailPage({
     (p) => ({ id: p.id, display_name: p.display_name, role: p.role }),
   );
 
-  const productTitle =
-    (customization?.product_title as string) ?? "（不明な商品）";
+  const isFullCustom = order.type === "full_custom";
+  const productTitle = isFullCustom
+    ? ((customization?.title as string) ?? "カスタムオーダー")
+    : ((customization?.product_title as string) ?? "（不明な商品）");
   const variantTitle = (customization?.variant_title as string) ?? "-";
   const quantity = (customization?.quantity as number) ?? 1;
   const unitPrice = (customization?.unit_price as number) ?? 0;
@@ -148,44 +151,55 @@ export default async function AdminOrderDetailPage({
 
         <div className="border bg-background">
           <div className="divide-y">
-            {productImageUrl ? (
-              <section className="relative aspect-[16/10] w-full overflow-hidden bg-muted">
-                <Image
-                  src={productImageUrl}
-                  alt={productImageAlt}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 60vw"
-                  className="object-cover"
-                  priority
-                />
-              </section>
-            ) : null}
+            {isFullCustom ? (
+              <FullCustomSections
+                customization={customization}
+                referenceImages={order.reference_images ?? []}
+              />
+            ) : (
+              <>
+                {productImageUrl ? (
+                  <section className="relative aspect-[16/10] w-full overflow-hidden bg-muted">
+                    <Image
+                      src={productImageUrl}
+                      alt={productImageAlt}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 60vw"
+                      className="object-cover"
+                      priority
+                    />
+                  </section>
+                ) : null}
 
-            <BentoSection title="注文内容">
-            <Row label="バリアント">{variantTitle}</Row>
-            <Row label="数量">{quantity}</Row>
-            <Row label="単価">{formatYen(unitPrice)}</Row>
-            <Row label="名入れ">{textEngraving ?? <Muted>なし</Muted>}</Row>
-            <Row label="ギフトラッピング">
-              {giftWrap ? "あり" : <Muted>なし</Muted>}
-            </Row>
-            <Row label="ギフトメッセージ">
-              {giftMessage ?? <Muted>なし</Muted>}
-            </Row>
-            <Row label="備考">
-              <span className="whitespace-pre-wrap">
-                {notes ?? <Muted>なし</Muted>}
-              </span>
-            </Row>
-          </BentoSection>
+                <BentoSection title="注文内容">
+                  <Row label="バリアント">{variantTitle}</Row>
+                  <Row label="数量">{quantity}</Row>
+                  <Row label="単価">{formatYen(unitPrice)}</Row>
+                  <Row label="名入れ">
+                    {textEngraving ?? <Muted>なし</Muted>}
+                  </Row>
+                  <Row label="ギフトラッピング">
+                    {giftWrap ? "あり" : <Muted>なし</Muted>}
+                  </Row>
+                  <Row label="ギフトメッセージ">
+                    {giftMessage ?? <Muted>なし</Muted>}
+                  </Row>
+                  <Row label="備考">
+                    <span className="whitespace-pre-wrap">
+                      {notes ?? <Muted>なし</Muted>}
+                    </span>
+                  </Row>
+                </BentoSection>
 
-          <BentoSection title="作り手（外部対応）">
-            <p className="text-sm">{craftsmanDisplayName ?? "—"}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              この職人とは BECOS が外部（電話・メール等）でやり取りします。
-              社内連絡事項は下記の社内メモに記録してください。
-            </p>
-          </BentoSection>
+                <BentoSection title="作り手（外部対応）">
+                  <p className="text-sm">{craftsmanDisplayName ?? "—"}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    この職人とは BECOS が外部（電話・メール等）でやり取りします。
+                    社内連絡事項は下記の社内メモに記録してください。
+                  </p>
+                </BentoSection>
+              </>
+            )}
 
           <BentoSection title="金額">
             <Row label="概算金額">
@@ -289,6 +303,61 @@ function Row({
 
 function Muted({ children }: { children: React.ReactNode }) {
   return <span className="text-muted-foreground">{children}</span>;
+}
+
+function FullCustomSections({
+  customization,
+  referenceImages,
+}: {
+  customization: Record<string, unknown> | null;
+  referenceImages: string[];
+}) {
+  const title = (customization?.title as string) ?? "（無題）";
+  const genre = (customization?.genre as string) ?? "-";
+  const description = (customization?.description as string) ?? "";
+  const budget = (customization?.budget as string) ?? "";
+  const deadline = (customization?.desired_deadline as string | null) ?? null;
+  const quantity = (customization?.quantity as number) ?? 1;
+
+  return (
+    <>
+      <BentoSection title="カスタムオーダー内容">
+        <Row label="件名">{title}</Row>
+        <Row label="ジャンル">{genre}</Row>
+        <Row label="ご予算">{budgetLabel(budget)}</Row>
+        <Row label="数量">{quantity}</Row>
+        <Row label="希望納期">{deadline || <Muted>指定なし</Muted>}</Row>
+        <Row label="ご要望">
+          <span className="whitespace-pre-wrap">
+            {description || <Muted>なし</Muted>}
+          </span>
+        </Row>
+      </BentoSection>
+
+      {referenceImages.length > 0 ? (
+        <BentoSection title="参考画像">
+          <ul className="grid grid-cols-3 gap-3 sm:grid-cols-5">
+            {referenceImages.map((url, i) => (
+              <li
+                key={url}
+                className="relative aspect-square overflow-hidden rounded-md border bg-muted"
+              >
+                <a href={url} target="_blank" rel="noreferrer">
+                  <Image
+                    src={url}
+                    alt={`参考画像 ${i + 1}`}
+                    fill
+                    sizes="120px"
+                    className="object-cover"
+                  />
+                </a>
+              </li>
+            ))}
+          </ul>
+        </BentoSection>
+      ) : null}
+    </>
+  );
 }
 
 function formatYen(amount: number): string {
