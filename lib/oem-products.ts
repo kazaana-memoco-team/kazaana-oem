@@ -1,9 +1,18 @@
 /**
  * OEM-eligible product registry.
  *
- * Phase 1 (MVP): hardcoded list of Shopify product handles + per-product
- * customization config. Future: move this to a Shopify metafield or admin DB.
+ * Two ways a Shopify product becomes OEM-customizable:
+ *  1. Hardcoded in OEM_PRODUCTS below (for products needing specific
+ *     customization labels / fees).
+ *  2. Tagged with OEM_PRODUCT_TAG in Shopify Admin — picked up automatically
+ *     and given DEFAULT_OEM_CUSTOMIZATIONS / DEFAULT_OEM_FEES.
+ *
+ * This lets BECOS add new OEM products by just tagging them in Shopify,
+ * with no code change.
  */
+
+/** Shopify tag that flags a product as OEM-customizable. */
+export const OEM_PRODUCT_TAG = "oem-customize";
 
 export type CustomizationField =
   | { kind: "text_engraving"; label: string; maxLength: number; required?: boolean }
@@ -64,8 +73,51 @@ export const OEM_PRODUCTS: OemProductConfig[] = [
   },
 ];
 
+/** Customizations applied to tag-discovered OEM products (no hardcoded entry). */
+export const DEFAULT_OEM_CUSTOMIZATIONS: CustomizationField[] = [
+  { kind: "text_engraving", label: "名入れ（最大10文字）", maxLength: 10 },
+  { kind: "gift_message", label: "ギフトメッセージ", maxLength: 50 },
+  { kind: "gift_wrap", label: "ギフトラッピング" },
+  { kind: "notes", label: "備考・特記事項" },
+];
+
+export const DEFAULT_OEM_FEES = {
+  text_engraving: 1000,
+  gift_wrap: 500,
+};
+
+/** Hardcoded config lookup only. */
 export function getOemProduct(handle: string): OemProductConfig | null {
   return OEM_PRODUCTS.find((p) => p.handle === handle) ?? null;
+}
+
+export function isHardcodedOemProduct(handle: string): boolean {
+  return OEM_PRODUCTS.some((p) => p.handle === handle);
+}
+
+/**
+ * Resolve the customization config for a product. Uses the hardcoded entry
+ * if present, otherwise builds a default config from the Shopify product
+ * (vendor → craftsman name). Returns null if the product is neither
+ * hardcoded nor tagged as OEM.
+ */
+export function resolveOemConfig(args: {
+  handle: string;
+  vendor?: string | null;
+  tags?: string[];
+}): OemProductConfig | null {
+  const hardcoded = getOemProduct(args.handle);
+  if (hardcoded) return hardcoded;
+
+  if (args.tags?.includes(OEM_PRODUCT_TAG)) {
+    return {
+      handle: args.handle,
+      craftsman_display_name: args.vendor?.trim() || "BECOS提携工房",
+      customizations: DEFAULT_OEM_CUSTOMIZATIONS,
+      fees: DEFAULT_OEM_FEES,
+    };
+  }
+  return null;
 }
 
 export type CustomizationValues = {

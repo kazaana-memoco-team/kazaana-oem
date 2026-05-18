@@ -1,4 +1,4 @@
-import { getOemProduct } from "@/lib/oem-products";
+import { getOemProduct, DEFAULT_OEM_FEES } from "@/lib/oem-products";
 import type { DocumentLineItem } from "@/components/documents/document-template";
 
 type CustomizationShape = {
@@ -22,9 +22,12 @@ export function buildLineItemsFromOrder(
   const unitPrice = Number(c.unit_price ?? 0);
   const quantity = Number(c.quantity ?? 1);
 
+  // Hardcoded products have specific fees; tag-discovered products use the
+  // defaults. (build-items only has the handle, not the Shopify tags.)
   const cfg = c.handle ? getOemProduct(c.handle) : null;
-  const engravingFee = cfg?.fees.text_engraving ?? 0;
-  const giftWrapFee = cfg?.fees.gift_wrap ?? 0;
+  const fees = cfg?.fees ?? DEFAULT_OEM_FEES;
+  const engravingFee = fees.text_engraving ?? 0;
+  const giftWrapFee = fees.gift_wrap ?? 0;
 
   const items: DocumentLineItem[] = [
     {

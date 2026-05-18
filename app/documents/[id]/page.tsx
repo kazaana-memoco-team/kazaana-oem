@@ -7,7 +7,7 @@ import {
 } from "@/components/documents/document-template";
 import { DocumentActions } from "./document-actions";
 import { DOCUMENT_TYPE_LABEL } from "@/lib/documents/types";
-import { getOemProduct } from "@/lib/oem-products";
+import { getOemProduct, DEFAULT_OEM_FEES } from "@/lib/oem-products";
 
 export const dynamic = "force-dynamic";
 
@@ -64,8 +64,9 @@ export default async function DocumentPage({
   const giftWrap = !!customization.gift_wrap;
 
   const cfg = customization.handle ? getOemProduct(customization.handle) : null;
-  const engravingFee = cfg?.fees.text_engraving ?? 0;
-  const giftWrapFee = cfg?.fees.gift_wrap ?? 0;
+  const fees = cfg?.fees ?? DEFAULT_OEM_FEES;
+  const engravingFee = fees.text_engraving ?? 0;
+  const giftWrapFee = fees.gift_wrap ?? 0;
 
   const items: DocumentLineItem[] = [
     {

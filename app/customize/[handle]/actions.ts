@@ -6,7 +6,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import {
   computeEstimatedTotal,
-  getOemProduct,
+  resolveOemConfig,
   type CustomizationValues,
 } from "@/lib/oem-products";
 import { getProductByHandle } from "@/lib/shopify/products";
@@ -33,9 +33,6 @@ export async function submitCustomization(
   handle: string,
   formData: FormData,
 ): Promise<SubmitResult> {
-  const cfg = getOemProduct(handle);
-  if (!cfg) return { error: "対応していない商品です。" };
-
   const supabase = await createClient();
   const {
     data: { user },
@@ -52,6 +49,13 @@ export async function submitCustomization(
   if (!product || product.status !== "ACTIVE") {
     return { error: "現在この商品はカスタマイズできません。" };
   }
+
+  const cfg = resolveOemConfig({
+    handle,
+    vendor: product.vendor,
+    tags: product.tags,
+  });
+  if (!cfg) return { error: "対応していない商品です。" };
 
   const variant = product.variants.find(
     (v) => v.id === parsed.data.variant_id,

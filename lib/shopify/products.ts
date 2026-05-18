@@ -6,6 +6,8 @@ export type ShopifyProduct = {
   title: string;
   description: string;
   status: string;
+  vendor: string;
+  tags: string[];
   featuredImage: { url: string; altText: string | null } | null;
   images: Array<{ url: string; altText: string | null }>;
   variants: Array<{
@@ -24,6 +26,8 @@ const PRODUCT_FIELDS = `
   title
   description
   status
+  vendor
+  tags
   featuredImage { url altText }
   images(first: 10) { nodes { url altText } }
   variants(first: 50) {
@@ -44,6 +48,8 @@ type RawProduct = {
   title: string;
   description: string;
   status: string;
+  vendor: string;
+  tags: string[];
   featuredImage: { url: string; altText: string | null } | null;
   images: { nodes: Array<{ url: string; altText: string | null }> };
   variants: {
@@ -65,6 +71,8 @@ function flattenProduct(p: RawProduct): ShopifyProduct {
     title: p.title,
     description: p.description,
     status: p.status,
+    vendor: p.vendor,
+    tags: p.tags,
     featuredImage: p.featuredImage,
     images: p.images.nodes,
     variants: p.variants.nodes,
@@ -87,6 +95,30 @@ export async function getProductByHandle(
     { handle },
   );
   return data.productByHandle ? flattenProduct(data.productByHandle) : null;
+}
+
+/**
+ * List ACTIVE products carrying a given tag (used for OEM-eligible products
+ * discovered via a Shopify tag instead of being hardcoded).
+ */
+export async function getProductsByTag(
+  tag: string,
+  limit = 50,
+): Promise<ShopifyProduct[]> {
+  const query = `
+    query GetProductsByTag($q: String!, $limit: Int!) {
+      products(first: $limit, query: $q) {
+        nodes {
+          ${PRODUCT_FIELDS}
+        }
+      }
+    }
+  `;
+  const data = await shopifyAdminFetch<{ products: { nodes: RawProduct[] } }>(
+    query,
+    { q: `tag:'${tag}' status:active`, limit },
+  );
+  return data.products.nodes.map(flattenProduct);
 }
 
 export async function getProductById(

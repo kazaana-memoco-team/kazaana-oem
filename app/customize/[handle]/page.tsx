@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { getOemProduct } from "@/lib/oem-products";
+import { resolveOemConfig } from "@/lib/oem-products";
 import { getProductByHandle } from "@/lib/shopify/products";
 import { CustomizeForm } from "./customize-form";
 import { createClient } from "@/lib/supabase/server";
@@ -14,11 +14,16 @@ export default async function CustomizeDetailPage({
   params: Promise<{ handle: string }>;
 }) {
   const { handle } = await params;
-  const cfg = getOemProduct(handle);
-  if (!cfg) notFound();
 
   const product = await getProductByHandle(handle);
   if (!product || product.status !== "ACTIVE") notFound();
+
+  const cfg = resolveOemConfig({
+    handle,
+    vendor: product.vendor,
+    tags: product.tags,
+  });
+  if (!cfg) notFound();
 
   const supabase = await createClient();
   const {
