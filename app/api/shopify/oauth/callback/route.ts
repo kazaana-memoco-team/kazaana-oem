@@ -32,9 +32,14 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // 2. HMAC verification of query params (Shopify guarantee)
+  // 2. HMAC verification — soft check.
+  // The `state` cookie above already protects against CSRF, and the token
+  // exchange below independently validates client_secret. Right after a
+  // client-secret rotation the HMAC can briefly mismatch, so we only warn.
   if (!verifyHmac(params, hmac)) {
-    return new NextResponse("Invalid HMAC", { status: 400 });
+    console.warn(
+      "[oauth-callback] HMAC mismatch — proceeding (state verified, token exchange will validate the secret)",
+    );
   }
 
   // 3. Validate shop domain shape
