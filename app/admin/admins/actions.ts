@@ -45,8 +45,13 @@ export async function inviteAdmin(
   });
 
   if (error || !data) {
+    const code = error?.code;
     const msg = error?.message ?? "招待リンクの生成に失敗しました";
-    if (/already|registered|exists/i.test(msg)) {
+    if (
+      code === "email_exists" ||
+      code === "user_already_exists" ||
+      /already|registered|exists/i.test(msg)
+    ) {
       return { ok: false, error: "このメールアドレスは既に登録済みです。" };
     }
     return { ok: false, error: msg };
@@ -70,7 +75,11 @@ export async function inviteAdmin(
     return { ok: false, error: `role 設定に失敗: ${roleErr.message}` };
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
+  // Absolute base URL so the emailed link works; trim any trailing slash to
+  // avoid a doubled "//" before the path.
+  const baseUrl = (
+    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3001"
+  ).replace(/\/+$/, "");
   const inviteUrl = `${baseUrl}/auth/confirm?token_hash=${encodeURIComponent(
     tokenHash,
   )}&type=invite&next=${encodeURIComponent("/auth/set-password")}`;

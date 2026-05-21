@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 const schema = z
   .object({
     password: z.string().min(8, "パスワードは8文字以上で入力してください"),
-    confirm: z.string(),
+    confirm: z.string().min(8, "確認用パスワードを入力してください"),
   })
   .refine((d) => d.password === d.confirm, {
     message: "パスワードが一致しません",
@@ -44,6 +44,14 @@ export async function setPassword(
     return { error: error.message };
   }
 
+  // Send the user where they belong instead of assuming admin — keeps this
+  // endpoint reusable (e.g. recovery) and avoids bouncing a non-admin off /admin.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+
   revalidatePath("/", "layout");
-  redirect("/admin");
+  redirect(profile?.role === "admin" ? "/admin" : "/account");
 }
