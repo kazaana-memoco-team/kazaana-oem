@@ -143,6 +143,20 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["documents"]["Insert"]>;
         Relationships: [];
       };
+      order_reads: {
+        Row: {
+          order_id: string;
+          user_id: string;
+          last_read_at: string;
+        };
+        Insert: {
+          order_id: string;
+          user_id: string;
+          last_read_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["order_reads"]["Insert"]>;
+        Relationships: [];
+      };
       system_settings: {
         Row: {
           key: string;

@@ -1,17 +1,17 @@
 import Link from "next/link";
 import Image from "next/image";
 import { buttonVariants } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/server";
 import { OEM_PRODUCTS } from "@/lib/oem-products";
 import { getProductByHandle } from "@/lib/shopify/products";
+import { getCurrentUserWithRole } from "@/lib/auth/current-user";
+import { AdminViewToggle } from "@/components/admin-view-toggle";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { userId, role } = await getCurrentUserWithRole();
+  const user = userId ? { id: userId } : null;
+  const isAdmin = role === "admin";
 
   // Live featured OEM products (only ACTIVE shown)
   const featured = (
@@ -35,6 +35,7 @@ export default async function Home() {
             </span>
           </Link>
           <nav className="flex items-center gap-2">
+            {isAdmin ? <AdminViewToggle /> : null}
             <Link
               href="/customize"
               className="hidden text-sm text-muted-foreground hover:text-foreground sm:inline"

@@ -12,6 +12,7 @@ import { getProductByHandle } from "@/lib/shopify/products";
 import { DocumentsList } from "@/components/documents/documents-list";
 import type { IssuedDocument } from "@/lib/documents/types";
 import { budgetLabel } from "@/lib/custom-order";
+import { MarkRead } from "./mark-read";
 
 export const dynamic = "force-dynamic";
 
@@ -120,6 +121,7 @@ export default async function OrderDetailPage({
 
   return (
     <main className="md:flex md:h-svh">
+      <MarkRead orderId={order.id} />
       {/* Left: scrollable content */}
       <div className="px-4 py-8 pb-28 md:flex-1 md:basis-[65%] md:overflow-y-auto md:px-8 md:pb-8 lg:px-12">
         <Link

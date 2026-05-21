@@ -59,6 +59,11 @@ export default async function AdminOrdersPage({
 
   const { data: orders, error } = await query;
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const orderIds = (orders ?? []).map((o) => o.id);
+
   // Pre-fetch customer profiles for display
   const customerIds = Array.from(
     new Set((orders ?? []).map((o) => o.customer_id).filter(Boolean)),
@@ -70,6 +75,38 @@ export default async function AdminOrdersPage({
         .in("id", customerIds)
     : { data: [] };
   const profileMap = new Map((profiles ?? []).map((p) => [p.id, p.display_name]));
+
+  // Unread (customer messages after admin's last read) per order
+  const unreadByOrder = new Map<string, number>();
+  if (user && orderIds.length) {
+    const [{ data: reads }, { data: msgs }] = await Promise.all([
+      supabase
+        .from("order_reads")
+        .select("order_id, last_read_at")
+        .eq("user_id", user.id)
+        .in("order_id", orderIds),
+      supabase
+        .from("messages")
+        .select("order_id, sender_id, sender_context, created_at")
+        .in("order_id", orderIds),
+    ]);
+    const readMap = new Map(
+      (reads ?? []).map((r) => [r.order_id, r.last_read_at]),
+    );
+    for (const m of msgs ?? []) {
+      // Admin cares about customer-context messages they haven't read
+      const lastRead = readMap.get(m.order_id);
+      const isFromCustomer = m.sender_context !== "admin";
+      const isUnread =
+        isFromCustomer && (!lastRead || m.created_at > lastRead);
+      if (isUnread) {
+        unreadByOrder.set(
+          m.order_id,
+          (unreadByOrder.get(m.order_id) ?? 0) + 1,
+        );
+      }
+    }
+  }
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
@@ -129,6 +166,7 @@ export default async function AdminOrdersPage({
                         {variantTitle ? `${variantTitle}　` : ""}
                         顧客: {customerName}
                         {new Date(o.created_at).toLocaleString("ja-JP", {
+                          timeZone: "Asia/Tokyo",
                           month: "numeric",
                           day: "numeric",
                           hour: "2-digit",
@@ -136,7 +174,12 @@ export default async function AdminOrdersPage({
                         })}
                       </p>
                     </div>
-                    <div className="flex shrink-0 items-baseline gap-3">
+                    <div className="flex shrink-0 items-center gap-3">
+                      {(unreadByOrder.get(o.id) ?? 0) > 0 ? (
+                        <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium text-primary-foreground">
+                          新着 {unreadByOrder.get(o.id)}
+                        </span>
+                      ) : null}
                       <span className="text-sm">
                         {o.final_price != null
                           ? formatYen(o.final_price)

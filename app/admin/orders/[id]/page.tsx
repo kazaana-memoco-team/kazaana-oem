@@ -16,6 +16,7 @@ import type {
   IssuedDocument,
 } from "@/lib/documents/types";
 import { budgetLabel } from "@/lib/custom-order";
+import { MarkRead } from "@/app/account/orders/[id]/mark-read";
 
 export const dynamic = "force-dynamic";
 

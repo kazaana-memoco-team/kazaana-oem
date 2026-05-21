@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { AdminSidebarLink } from "./_components/sidebar-link";
+import { AdminViewToggle } from "@/components/admin-view-toggle";
 
 export const dynamic = "force-dynamic";
 
@@ -41,15 +42,23 @@ export default async function AdminLayout({
           <AdminSidebarLink href="/admin/orders">注文一覧</AdminSidebarLink>
           <AdminSidebarLink href="/admin/templates">テンプレ</AdminSidebarLink>
         </nav>
-        <div className="border-t p-3">
-          <p className="line-clamp-1 text-xs text-muted-foreground">
-            {profile?.display_name ?? user.email}
-          </p>
-          <form action={signOut} className="mt-2">
-            <Button type="submit" variant="outline" size="sm" className="w-full">
-              ログアウト
-            </Button>
-          </form>
+        <div className="space-y-3 border-t p-3">
+          <AdminViewToggle />
+          <div>
+            <p className="line-clamp-1 text-xs text-muted-foreground">
+              {profile?.display_name ?? user.email}
+            </p>
+            <form action={signOut} className="mt-2">
+              <Button
+                type="submit"
+                variant="outline"
+                size="sm"
+                className="w-full"
+              >
+                ログアウト
+              </Button>
+            </form>
+          </div>
         </div>
       </aside>
 

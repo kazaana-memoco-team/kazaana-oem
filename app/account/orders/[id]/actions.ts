@@ -3,13 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import {
+  createClient,
+  createServiceRoleClient,
+} from "@/lib/supabase/server";
 import {
   createDraftOrder,
   type DraftOrderLineItemInput,
 } from "@/lib/shopify/draft-orders";
 import { getOemProduct, computeEstimatedTotal } from "@/lib/oem-products";
 import { getProductByHandle } from "@/lib/shopify/products";
+import { notifyNewMessage } from "@/lib/email/notify";
 
 const messageSchema = z.object({
   body: z.string().trim().min(1, "メッセージを入力してください").max(4000),
@@ -60,6 +64,19 @@ export async function sendMessage(
     return { ok: false, error: error.message };
   }
 
+  // Notify the other side by email (best-effort, never blocks the send).
+  try {
+    const svc = await createServiceRoleClient();
+    await notifyNewMessage({
+      serviceClient: svc,
+      orderId,
+      senderContext: context,
+      body: parsed.data.body,
+    });
+  } catch (e) {
+    console.error("[sendMessage] notification failed", e);
+  }
+
   revalidatePath(`/account/orders/${orderId}`);
   return { ok: true };
 }
@@ -88,6 +105,24 @@ export async function deleteMessage(
   revalidatePath(`/account/orders/${data[0].order_id}`);
   revalidatePath(`/admin/orders/${data[0].order_id}`);
   return { ok: true };
+}
+
+/** Mark an order's chat as read up to now for the current user. */
+export async function markOrderRead(orderId: string): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase.from("order_reads").upsert(
+    {
+      order_id: orderId,
+      user_id: user.id,
+      last_read_at: new Date().toISOString(),
+    },
+    { onConflict: "order_id,user_id" },
+  );
 }
 
 export type ProceedToCheckoutResult =
