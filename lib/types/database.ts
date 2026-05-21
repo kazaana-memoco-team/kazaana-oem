@@ -139,6 +139,7 @@ export interface Database {
           notes?: string | null;
           issued_by?: string | null;
           metadata?: Json;
+          created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["documents"]["Insert"]>;
         Relationships: [];

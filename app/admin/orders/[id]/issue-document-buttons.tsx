@@ -30,15 +30,23 @@ export function IssueDocumentButtons({
         {TYPES.map((t) => {
           const issued = alreadyIssued.includes(t);
           const busy = pendingType === t;
+          const label = DOCUMENT_TYPE_LABEL[t];
           return (
             <Button
               key={t}
               type="button"
               size="sm"
               variant={issued ? "outline" : "default"}
-              disabled={issued || !!pendingType}
+              disabled={!!pendingType}
               onClick={() => {
-                if (issued) return;
+                if (
+                  issued &&
+                  !window.confirm(
+                    `顧客に通知（メール・チャット）が再送されます。${label} を再発行しますか？`,
+                  )
+                ) {
+                  return;
+                }
                 setError(null);
                 setPendingType(t);
                 startTransition(async () => {
@@ -50,7 +58,13 @@ export function IssueDocumentButtons({
                 });
               }}
             >
-              {busy ? "発行中…" : issued ? `${DOCUMENT_TYPE_LABEL[t]} ✓` : `${DOCUMENT_TYPE_LABEL[t]} を発行`}
+              {busy
+                ? issued
+                  ? "再発行中…"
+                  : "発行中…"
+                : issued
+                  ? `${label} を再発行`
+                  : `${label} を発行`}
             </Button>
           );
         })}
@@ -61,8 +75,8 @@ export function IssueDocumentButtons({
         </p>
       ) : null}
       <p className="text-xs text-muted-foreground">
-        通常、見積書は確定金額の保存時に・請求書/納品書/領収書は支払い完了時に自動発行されます。
-        上のボタンは保険として手動で発行するためのものです。
+        見積書は確定金額の保存時・請求書/納品書/領収書は支払い完了時に自動発行されます。
+        確定金額や内容を変更した後は「再発行」で最新内容に作り直せます（顧客へ再通知されます）。
       </p>
     </div>
   );

@@ -18,7 +18,7 @@ import {
   type EmailTemplate,
 } from "@/lib/email/templates";
 import { sendEmail } from "@/lib/email/send";
-import { uploadFileToFolder } from "@/lib/google/drive";
+import { uploadFileToFolder, updateFileContent } from "@/lib/google/drive";
 import { renderDocumentHtml } from "./html-template";
 import { htmlToPdf } from "./pdf-generator";
 import { buildLineItemsFromOrder } from "./build-items";
@@ -55,8 +55,10 @@ export async function issueDocumentWithNotifications(args: {
   type: DocumentType;
   /** Profile id used as `issued_by` and as the chat sender. If null, will look up an admin. */
   issuedBy?: string | null;
+  /** Allow updating an already-issued document (manual re-issue). */
+  allowReissue?: boolean;
 }): Promise<IssueResult> {
-  const { supabase, orderId, type } = args;
+  const { supabase, orderId, type, allowReissue = false } = args;
 
   // 1) Order data
   const { data: order, error: orderErr } = await supabase
@@ -83,14 +85,15 @@ export async function issueDocumentWithNotifications(args: {
     };
   }
 
-  // 2) Skip if already issued
+  // 2) Existing document?
   const { data: existing } = await supabase
     .from("documents")
-    .select("id")
+    .select("id, metadata")
     .eq("order_id", orderId)
     .eq("type", type)
     .maybeSingle();
-  if (existing) {
+  const isReissue = !!existing;
+  if (existing && !allowReissue) {
     return {
       type,
       emailed: false,
@@ -112,30 +115,55 @@ export async function issueDocumentWithNotifications(args: {
   }
 
   const amount = order.final_price ?? order.estimated_price ?? null;
+  const nowIso = new Date().toISOString();
 
-  // 4) Insert
-  const { data: inserted, error: insertErr } = await supabase
-    .from("documents")
-    .insert({
-      order_id: orderId,
-      type,
-      document_number: order.order_number,
-      amount,
-      issued_by: issuedBy,
-    })
-    .select("id")
-    .single();
-  if (insertErr || !inserted) {
-    return {
-      type,
-      emailed: false,
-      chatPosted: false,
-      error: insertErr?.message ?? "insert failed",
-    };
+  // 4) Insert (first issue) or update (re-issue)
+  let documentId: string;
+  let existingMetadata: Record<string, unknown> = {};
+  if (existing) {
+    existingMetadata = (existing.metadata as Record<string, unknown>) ?? {};
+    const { error: updateErr } = await supabase
+      .from("documents")
+      .update({
+        amount,
+        issued_by: issuedBy,
+        created_at: nowIso,
+      })
+      .eq("id", existing.id);
+    if (updateErr) {
+      return {
+        type,
+        emailed: false,
+        chatPosted: false,
+        error: updateErr.message,
+      };
+    }
+    documentId = existing.id;
+  } else {
+    const { data: inserted, error: insertErr } = await supabase
+      .from("documents")
+      .insert({
+        order_id: orderId,
+        type,
+        document_number: order.order_number,
+        amount,
+        issued_by: issuedBy,
+      })
+      .select("id")
+      .single();
+    if (insertErr || !inserted) {
+      return {
+        type,
+        emailed: false,
+        chatPosted: false,
+        error: insertErr?.message ?? "insert failed",
+      };
+    }
+    documentId = inserted.id;
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
-  const documentUrl = `${baseUrl}/documents/${inserted.id}`;
+  const documentUrl = `${baseUrl}/documents/${documentId}`;
   const label = DOCUMENT_TYPE_LABEL[type];
 
   // 5) Customer profile + email lookup
@@ -149,10 +177,11 @@ export async function issueDocumentWithNotifications(args: {
   // 6) Chat message (best-effort)
   let chatPosted = false;
   if (issuedBy) {
+    const verb = isReissue ? "再発行" : "発行";
     const { error: chatErr } = await supabase.from("messages").insert({
       order_id: orderId,
       sender_id: issuedBy,
-      body: `📄 ${label}（${order.order_number}）を発行しました。\n${documentUrl}`,
+      body: `📄 ${label}（${order.order_number}）を${verb}しました。\n${documentUrl}`,
       sender_context: "admin",
     });
     chatPosted = !chatErr;
@@ -183,31 +212,50 @@ export async function issueDocumentWithNotifications(args: {
     console.error("[issue] email send failed", e);
   }
 
-  // 8) PDF generation + Drive upload (best-effort)
-  let driveFileId: string | null = null;
-  let driveUrl: string | null = null;
+  // 8) PDF generation + Drive upload/overwrite (best-effort)
+  const existingDriveFileId =
+    (existingMetadata.drive_file_id as string | undefined) ?? null;
+  const existingDriveUrl =
+    (existingMetadata.drive_view_url as string | undefined) ?? null;
+  let driveFileId: string | null = existingDriveFileId;
+  let driveUrl: string | null = existingDriveUrl;
   try {
     const folderId = process.env[DRIVE_FOLDER_ENV[type]];
     if (folderId) {
-      const items = buildLineItemsFromOrder(order.customization);
+      const items = buildLineItemsFromOrder(
+        order.customization,
+        order.final_price,
+      );
       const html = renderDocumentHtml({
         type,
         documentNumber: order.order_number,
-        issuedAt: new Date().toISOString(),
+        issuedAt: nowIso,
         recipientName: formatRecipientName(customerName),
         items,
         notes: null,
         metaLines: defaultMetaLines(type),
       });
       const pdf = await htmlToPdf(html);
-      const uploaded = await uploadFileToFolder({
-        parentId: folderId,
-        fileName: `${order.order_number}_${label}.pdf`,
-        mimeType: "application/pdf",
-        content: pdf,
-      });
-      driveFileId = uploaded.id;
-      driveUrl = uploaded.webViewLink;
+
+      if (isReissue && existingDriveFileId) {
+        // Overwrite the existing Drive file (no duplicates)
+        const updated = await updateFileContent({
+          fileId: existingDriveFileId,
+          mimeType: "application/pdf",
+          content: pdf,
+        });
+        driveFileId = updated.id;
+        driveUrl = updated.webViewLink ?? existingDriveUrl;
+      } else {
+        const uploaded = await uploadFileToFolder({
+          parentId: folderId,
+          fileName: `${order.order_number}_${label}.pdf`,
+          mimeType: "application/pdf",
+          content: pdf,
+        });
+        driveFileId = uploaded.id;
+        driveUrl = uploaded.webViewLink;
+      }
 
       // Persist drive metadata on the document row
       await supabase
@@ -218,7 +266,7 @@ export async function issueDocumentWithNotifications(args: {
             drive_view_url: driveUrl,
           },
         })
-        .eq("id", inserted.id);
+        .eq("id", documentId);
     }
   } catch (e) {
     console.error("[issue] PDF/Drive upload failed", e);
@@ -230,18 +278,19 @@ export async function issueDocumentWithNotifications(args: {
     actor_id: issuedBy,
     event_type: "document_issued",
     payload: {
-      document_id: inserted.id,
+      document_id: documentId,
       type,
       document_number: order.order_number,
       emailed,
       chat_posted: chatPosted,
       drive_file_id: driveFileId,
+      reissued: isReissue,
     },
   });
 
   return {
     type,
-    documentId: inserted.id,
+    documentId,
     documentNumber: order.order_number,
     emailed,
     chatPosted,

@@ -15,6 +15,7 @@ type CustomizationShape = {
 
 export function buildLineItemsFromOrder(
   customization: unknown,
+  finalPrice?: number | null,
 ): DocumentLineItem[] {
   const c = (customization ?? {}) as CustomizationShape;
   const productTitle = c.product_title ?? "（不明な商品）";
@@ -53,6 +54,19 @@ export function buildLineItemsFromOrder(
       unitPrice: giftWrapFee,
       quantity: 1,
     });
+  }
+
+  // When a confirmed price is set and differs from the computed subtotal,
+  // append an adjustment line so the document total matches final_price.
+  if (finalPrice != null) {
+    const subtotal = items.reduce(
+      (sum, it) => sum + it.unitPrice * it.quantity,
+      0,
+    );
+    const diff = finalPrice - subtotal;
+    if (diff !== 0) {
+      items.push({ description: "調整", unitPrice: diff, quantity: 1 });
+    }
   }
 
   return items;

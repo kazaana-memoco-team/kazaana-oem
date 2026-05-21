@@ -48,6 +48,7 @@ export async function issueDocument(
     orderId,
     type,
     issuedBy: auth.userId,
+    allowReissue: true,
   });
 
   if (result.error) {

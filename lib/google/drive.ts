@@ -114,3 +114,31 @@ export async function uploadFileToFolder(args: {
     webViewLink: res.data.webViewLink ?? null,
   };
 }
+
+/**
+ * Overwrite the content of an existing Drive file (used when re-issuing a
+ * document so we don't create duplicates in the folder).
+ */
+export async function updateFileContent(args: {
+  fileId: string;
+  mimeType: string;
+  content: Buffer | string;
+}): Promise<{ id: string; webViewLink: string | null }> {
+  const drive = getDriveClient();
+  const body =
+    typeof args.content === "string"
+      ? Readable.from([args.content])
+      : Readable.from(args.content);
+
+  const res = await drive.files.update({
+    fileId: args.fileId,
+    media: { mimeType: args.mimeType, body },
+    fields: "id, webViewLink",
+    supportsAllDrives: true,
+  });
+
+  return {
+    id: res.data.id ?? args.fileId,
+    webViewLink: res.data.webViewLink ?? null,
+  };
+}

@@ -1,25 +1,15 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import {
-  DocumentTemplate,
-  type DocumentLineItem,
-} from "@/components/documents/document-template";
+import { DocumentTemplate } from "@/components/documents/document-template";
 import { DocumentActions } from "./document-actions";
 import { DOCUMENT_TYPE_LABEL } from "@/lib/documents/types";
-import { getOemProduct, DEFAULT_OEM_FEES } from "@/lib/oem-products";
+import { buildLineItemsFromOrder } from "@/lib/documents/build-items";
 
 export const dynamic = "force-dynamic";
 
 type CustomizationShape = {
   product_title?: string;
-  variant_title?: string;
-  unit_price?: number;
-  quantity?: number;
-  text_engraving?: string | null;
-  gift_wrap?: boolean;
-  gift_message?: string | null;
-  notes?: string | null;
   handle?: string;
 };
 
@@ -57,40 +47,9 @@ export default async function DocumentPage({
 
   const customization = (order.customization ?? {}) as CustomizationShape;
   const productTitle = customization.product_title ?? "（不明な商品）";
-  const variantTitle = customization.variant_title ?? "";
-  const unitPrice = Number(customization.unit_price ?? 0);
-  const quantity = Number(customization.quantity ?? 1);
-  const textEngraving = customization.text_engraving ?? null;
-  const giftWrap = !!customization.gift_wrap;
 
-  const cfg = customization.handle ? getOemProduct(customization.handle) : null;
-  const fees = cfg?.fees ?? DEFAULT_OEM_FEES;
-  const engravingFee = fees.text_engraving ?? 0;
-  const giftWrapFee = fees.gift_wrap ?? 0;
-
-  const items: DocumentLineItem[] = [
-    {
-      description: variantTitle
-        ? `${productTitle} (${variantTitle})`
-        : productTitle,
-      unitPrice,
-      quantity,
-    },
-  ];
-  if (textEngraving && engravingFee > 0) {
-    items.push({
-      description: `名入れ加工: ${textEngraving}`,
-      unitPrice: engravingFee,
-      quantity,
-    });
-  }
-  if (giftWrap && giftWrapFee > 0) {
-    items.push({
-      description: "ギフトラッピング",
-      unitPrice: giftWrapFee,
-      quantity: 1,
-    });
-  }
+  // Single source of truth for line items (reflects final_price adjustment).
+  const items = buildLineItemsFromOrder(order.customization, order.final_price);
 
   const recipientName = customer?.display_name ?? "ご注文者様";
   const looksLikeCompany = /(株式会社|有限会社|合同会社|合資会社|御中)/.test(
