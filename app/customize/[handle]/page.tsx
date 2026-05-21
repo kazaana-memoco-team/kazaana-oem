@@ -31,50 +31,50 @@ export default async function CustomizeDetailPage({
   } = await supabase.auth.getUser();
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-10">
-      <Link
-        href="/customize"
-        className="text-sm text-muted-foreground underline-offset-4 hover:underline"
-      >
-        ← カスタマイズ商品一覧
-      </Link>
+    <main className="md:grid md:h-screen md:grid-cols-2 md:overflow-hidden">
+      {/* Left: full-height product image (stacks above content on mobile) */}
+      <section className="relative h-[45vh] bg-muted md:h-screen">
+        {product.featuredImage ? (
+          <Image
+            src={product.featuredImage.url}
+            alt={product.featuredImage.altText ?? product.title}
+            fill
+            sizes="(max-width: 768px) 100vw, 50vw"
+            className="object-cover"
+            priority
+          />
+        ) : null}
+        {product.images.length > 1 ? (
+          <div className="absolute inset-x-0 bottom-0 flex gap-2 bg-gradient-to-t from-black/50 to-transparent p-3">
+            {product.images.slice(1, 5).map((img, i) => (
+              <div
+                key={i}
+                className="relative size-16 shrink-0 overflow-hidden rounded-md border border-white/40 bg-muted"
+              >
+                <Image
+                  src={img.url}
+                  alt={img.altText ?? ""}
+                  fill
+                  sizes="64px"
+                  className="object-cover"
+                />
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </section>
 
-      <div className="mt-6 grid gap-10 md:grid-cols-2">
-        <section>
-          {product.featuredImage ? (
-            <div className="relative aspect-square overflow-hidden rounded-lg border bg-muted">
-              <Image
-                src={product.featuredImage.url}
-                alt={product.featuredImage.altText ?? product.title}
-                fill
-                sizes="(max-width: 768px) 100vw, 50vw"
-                className="object-cover"
-                priority
-              />
-            </div>
-          ) : null}
-          {product.images.length > 1 ? (
-            <div className="mt-3 grid grid-cols-4 gap-2">
-              {product.images.slice(1, 5).map((img, i) => (
-                <div
-                  key={i}
-                  className="relative aspect-square overflow-hidden rounded-md border bg-muted"
-                >
-                  <Image
-                    src={img.url}
-                    alt={img.altText ?? ""}
-                    fill
-                    sizes="20vw"
-                    className="object-cover"
-                  />
-                </div>
-              ))}
-            </div>
-          ) : null}
-        </section>
+      {/* Right: scrollable content column */}
+      <section className="md:h-screen md:overflow-y-auto">
+        <div className="mx-auto w-full max-w-lg px-4 py-8 md:px-10 md:py-12">
+          <Link
+            href="/customize"
+            className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+          >
+            ← カスタマイズ商品一覧
+          </Link>
 
-        <section>
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="mt-6 text-2xl font-semibold tracking-tight">
             {product.title}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -115,8 +115,8 @@ export default async function CustomizeDetailPage({
               </div>
             )}
           </div>
-        </section>
-      </div>
+        </div>
+      </section>
     </main>
   );
 }
