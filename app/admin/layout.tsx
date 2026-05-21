@@ -41,6 +41,7 @@ export default async function AdminLayout({
         <nav className="flex-1 space-y-0.5 p-2">
           <AdminSidebarLink href="/admin/orders">注文一覧</AdminSidebarLink>
           <AdminSidebarLink href="/admin/templates">テンプレ</AdminSidebarLink>
+          <AdminSidebarLink href="/admin/admins">管理者</AdminSidebarLink>
         </nav>
         <div className="space-y-3 border-t p-3">
           <AdminViewToggle />
