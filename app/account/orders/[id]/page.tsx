@@ -152,27 +152,34 @@ export default async function OrderDetailPage({
               />
             ) : (
               <>
-                {productImageUrl ? (
-                  <section className="relative aspect-[16/10] w-full overflow-hidden bg-muted">
-                    <Image
-                      src={productImageUrl}
-                      alt={productImageAlt}
-                      fill
-                      sizes="(max-width: 768px) 100vw, 60vw"
-                      className="object-cover"
-                      priority
-                    />
-                  </section>
-                ) : null}
-
                 <BentoSection title="商品">
-                  <Row label="商品名">{productTitle}</Row>
-                  <Row label="バリエーション">{variantTitle}</Row>
-                  <Row label="数量">{quantity}</Row>
-                  <Row label="単価">{formatYen(unitPrice)}</Row>
-                  {craftsmanDisplayName ? (
-                    <Row label="作り手">{craftsmanDisplayName}</Row>
-                  ) : null}
+                  <div className="flex gap-4">
+                    {productImageUrl ? (
+                      <div className="relative aspect-square w-24 shrink-0 overflow-hidden rounded-lg border bg-muted sm:w-32">
+                        <Image
+                          src={productImageUrl}
+                          alt={productImageAlt}
+                          fill
+                          sizes="128px"
+                          className="object-cover"
+                          priority
+                        />
+                      </div>
+                    ) : null}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium leading-snug">
+                        {productTitle}
+                      </p>
+                      <dl className="mt-2 space-y-1">
+                        <Row label="バリエーション">{variantTitle}</Row>
+                        <Row label="数量">{quantity}</Row>
+                        <Row label="単価">{formatYen(unitPrice)}</Row>
+                        {craftsmanDisplayName ? (
+                          <Row label="作り手">{craftsmanDisplayName}</Row>
+                        ) : null}
+                      </dl>
+                    </div>
+                  </div>
                 </BentoSection>
 
                 <BentoSection title="カスタマイズ内容">

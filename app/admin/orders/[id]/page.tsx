@@ -159,37 +159,40 @@ export default async function AdminOrderDetailPage({
               />
             ) : (
               <>
-                {productImageUrl ? (
-                  <section className="relative aspect-[16/10] w-full overflow-hidden bg-muted">
-                    <Image
-                      src={productImageUrl}
-                      alt={productImageAlt}
-                      fill
-                      sizes="(max-width: 768px) 100vw, 60vw"
-                      className="object-cover"
-                      priority
-                    />
-                  </section>
-                ) : null}
-
                 <BentoSection title="注文内容">
-                  <Row label="バリエーション">{variantTitle}</Row>
-                  <Row label="数量">{quantity}</Row>
-                  <Row label="単価">{formatYen(unitPrice)}</Row>
-                  <Row label="名入れ">
-                    {textEngraving ?? <Muted>なし</Muted>}
-                  </Row>
-                  <Row label="ギフトラッピング">
-                    {giftWrap ? "あり" : <Muted>なし</Muted>}
-                  </Row>
-                  <Row label="ギフトメッセージ">
-                    {giftMessage ?? <Muted>なし</Muted>}
-                  </Row>
-                  <Row label="備考">
-                    <span className="whitespace-pre-wrap">
-                      {notes ?? <Muted>なし</Muted>}
-                    </span>
-                  </Row>
+                  <div className="flex gap-4">
+                    {productImageUrl ? (
+                      <div className="relative aspect-square w-24 shrink-0 overflow-hidden rounded-lg border bg-muted sm:w-32">
+                        <Image
+                          src={productImageUrl}
+                          alt={productImageAlt}
+                          fill
+                          sizes="128px"
+                          className="object-cover"
+                          priority
+                        />
+                      </div>
+                    ) : null}
+                    <dl className="min-w-0 flex-1 space-y-1">
+                      <Row label="バリエーション">{variantTitle}</Row>
+                      <Row label="数量">{quantity}</Row>
+                      <Row label="単価">{formatYen(unitPrice)}</Row>
+                      <Row label="名入れ">
+                        {textEngraving ?? <Muted>なし</Muted>}
+                      </Row>
+                      <Row label="ギフトラッピング">
+                        {giftWrap ? "あり" : <Muted>なし</Muted>}
+                      </Row>
+                      <Row label="ギフトメッセージ">
+                        {giftMessage ?? <Muted>なし</Muted>}
+                      </Row>
+                      <Row label="備考">
+                        <span className="whitespace-pre-wrap">
+                          {notes ?? <Muted>なし</Muted>}
+                        </span>
+                      </Row>
+                    </dl>
+                  </div>
                 </BentoSection>
 
                 <BentoSection title="作り手（外部対応）">
