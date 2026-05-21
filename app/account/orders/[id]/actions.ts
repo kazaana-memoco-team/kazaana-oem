@@ -139,7 +139,7 @@ export async function proceedToCheckout(
   const variant = product.variants.find(
     (v) => v.id === order.shopify_variant_id,
   );
-  if (!variant) return { ok: false, error: "バリアントが見つかりません。" };
+  if (!variant) return { ok: false, error: "バリエーションが見つかりません。" };
 
   const quantity = (customization.quantity as number) ?? 1;
   const textEngraving = (customization.text_engraving as string | null) ?? null;

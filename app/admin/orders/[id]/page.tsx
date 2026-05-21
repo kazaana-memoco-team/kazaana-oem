@@ -172,7 +172,7 @@ export default async function AdminOrderDetailPage({
                 ) : null}
 
                 <BentoSection title="注文内容">
-                  <Row label="バリアント">{variantTitle}</Row>
+                  <Row label="バリエーション">{variantTitle}</Row>
                   <Row label="数量">{quantity}</Row>
                   <Row label="単価">{formatYen(unitPrice)}</Row>
                   <Row label="名入れ">

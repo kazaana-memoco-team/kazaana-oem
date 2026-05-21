@@ -61,10 +61,10 @@ export async function submitCustomization(
     (v) => v.id === parsed.data.variant_id,
   );
   if (!variant) {
-    return { error: "選択されたバリアントが見つかりません。" };
+    return { error: "選択されたバリエーションが見つかりません。" };
   }
   if (!variant.availableForSale) {
-    return { error: "選択されたバリアントは在庫切れです。" };
+    return { error: "選択されたバリエーションは在庫切れです。" };
   }
 
   const giftWrap =

@@ -115,13 +115,19 @@ export function CustomizeForm({
       />
 
       <div className="space-y-2">
-        <Label htmlFor="variant">バリアント</Label>
+        <Label htmlFor="variant">バリエーション</Label>
         <Select
           value={variantId}
           onValueChange={(v) => v && setVariantId(v)}
         >
-          <SelectTrigger id="variant">
-            <SelectValue placeholder="選択" />
+          <SelectTrigger id="variant" className="w-full">
+            <SelectValue>
+              {() =>
+                `${selectedVariant.title} — ${formatYen(selectedVariant.price)}${
+                  selectedVariant.available ? "" : "（在庫切れ）"
+                }`
+              }
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {variants.map((v) => (

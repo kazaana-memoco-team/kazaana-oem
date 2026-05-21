@@ -165,7 +165,7 @@ export default async function OrderDetailPage({
 
                 <BentoSection title="商品">
                   <Row label="商品名">{productTitle}</Row>
-                  <Row label="バリアント">{variantTitle}</Row>
+                  <Row label="バリエーション">{variantTitle}</Row>
                   <Row label="数量">{quantity}</Row>
                   <Row label="単価">{formatYen(unitPrice)}</Row>
                   {craftsmanDisplayName ? (
