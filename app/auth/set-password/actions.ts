@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserWithRole } from "@/lib/auth/current-user";
 
 const schema = z
   .object({
@@ -21,11 +22,8 @@ export async function setPassword(
   _prev: SetPasswordResult | undefined,
   formData: FormData,
 ): Promise<SetPasswordResult> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
+  const me = await getCurrentUserWithRole();
+  if (!me.userId) {
     return { error: "セッションが無効です。招待リンクを開き直してください。" };
   }
 
@@ -37,6 +35,7 @@ export async function setPassword(
     return { error: parsed.error.issues[0]?.message ?? "入力エラー" };
   }
 
+  const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({
     password: parsed.data.password,
   });
@@ -44,14 +43,8 @@ export async function setPassword(
     return { error: error.message };
   }
 
+  revalidatePath("/", "layout");
   // Send the user where they belong instead of assuming admin — keeps this
   // endpoint reusable (e.g. recovery) and avoids bouncing a non-admin off /admin.
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  revalidatePath("/", "layout");
-  redirect(profile?.role === "admin" ? "/admin" : "/account");
+  redirect(me.role === "admin" ? "/admin" : "/account");
 }

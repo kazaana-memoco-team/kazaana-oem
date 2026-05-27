@@ -10,6 +10,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/types/database";
 import { sendEmail } from "./send";
 import { ISSUER } from "@/lib/documents/issuer";
+import { getSiteUrl } from "@/lib/site-url";
 
 type Client = SupabaseClient<Database>;
 
@@ -28,7 +29,7 @@ export async function notifyNewMessage(args: {
     .maybeSingle();
   if (!order) return;
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
+  const baseUrl = getSiteUrl();
   const preview = body.length > 140 ? `${body.slice(0, 140)}…` : body;
   const orderNo = order.order_number ?? orderId.slice(0, 8);
 

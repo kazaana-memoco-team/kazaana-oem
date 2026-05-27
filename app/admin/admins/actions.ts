@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { getCurrentUserWithRole } from "@/lib/auth/current-user";
 import { sendAdminInvite } from "@/lib/email/invite";
+import { getSiteUrl } from "@/lib/site-url";
 
 const schema = z.object({
   email: z.string().trim().email("メールアドレスを正しく入力してください"),
@@ -75,12 +76,7 @@ export async function inviteAdmin(
     return { ok: false, error: `role 設定に失敗: ${roleErr.message}` };
   }
 
-  // Absolute base URL so the emailed link works; trim any trailing slash to
-  // avoid a doubled "//" before the path.
-  const baseUrl = (
-    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3001"
-  ).replace(/\/+$/, "");
-  const inviteUrl = `${baseUrl}/auth/confirm?token_hash=${encodeURIComponent(
+  const inviteUrl = `${getSiteUrl()}/auth/confirm?token_hash=${encodeURIComponent(
     tokenHash,
   )}&type=invite&next=${encodeURIComponent("/auth/set-password")}`;
 

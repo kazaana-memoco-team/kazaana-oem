@@ -18,6 +18,7 @@ import {
   type EmailTemplate,
 } from "@/lib/email/templates";
 import { sendEmail } from "@/lib/email/send";
+import { getSiteUrl } from "@/lib/site-url";
 import { uploadFileToFolder, updateFileContent } from "@/lib/google/drive";
 import { renderDocumentHtml } from "./html-template";
 import { htmlToPdf } from "./pdf-generator";
@@ -162,8 +163,7 @@ export async function issueDocumentWithNotifications(args: {
     documentId = inserted.id;
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
-  const documentUrl = `${baseUrl}/documents/${documentId}`;
+  const documentUrl = `${getSiteUrl()}/documents/${documentId}`;
   const label = DOCUMENT_TYPE_LABEL[type];
 
   // 5) Customer profile + email lookup
