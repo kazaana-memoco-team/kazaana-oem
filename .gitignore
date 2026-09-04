@@ -77,3 +77,8 @@ next-env.d.ts
 .windsurf/
 .zencoder/
 .env*.local
+
+# example/template はコミット可能にする（2026-09-04）
+!.env.example
+!.env.template
+!.env.sample
